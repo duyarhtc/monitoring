@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # PostgreSQL (Optimized for Low Memory)
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+      POSTGRES_INITDB_ARGS: "--no-locale --encoding=UTF-8"  
+      PG_OOM_ADJUST_VALUE: "0"  
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+          cpus: '0.5'
+    restart: unless-stopped
+  
+
+
+  # Redis (Optimized for Low Memory)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: [
+      "redis-server",
+      "--maxmemory 256mb",
+      "--maxmemory-policy allkeys-lru",
+      "--save 60 1",
+      "--appendonly no"  
+    ]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+          cpus: '0.3'
+    restart: unless-stopped
+
+      
+ # PostgreSQL Metrics Exporter
+  postgres-exporter:
+    image: wrouesnel/postgres_exporter
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/mydb?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9187/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 5    
+    depends_on:
+      - postgres
+
+ #redis exporter   
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: redis-exporter
+    environment:
+      REDIS_ADDR: "redis://redis:6379" 
+    ports:
+      - "9121:9121"
+    networks:
+      - backend
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+ # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ~/project/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_DISABLE_INITIAL_ADMIN_TOKEN_ROTATION=true
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      
+  #node exporter
+#  node-exporter:
+#    image: prom/node-exporter:latest
+#    container_name: node-exporter
+#    ports:
+#      - "9100:9100"
+#    networks:
+#      - backend
+#    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:
+
+networks:
+  backend:
+    driver: bridge
+    name: backend

@@ -22,7 +22,8 @@ docker-compose up -d
   
 ## Configuration
 - Edit `prometheus/prometheus.yml` for monitoring settings (The file directory should be updated in the docker-compose document.)
-![prometheus](https://github.com/user-attachments/assets/f5ef274d-91a9-4de3-a2c0-f289bd7a40cc)
+![prometheus](https://github.com/user-attachments/assets/7d36ce40-3ed9-4e71-b757-1e29bae39cef)
+
 
 - Create Data Source on Grafana GUI for Prometheus
 - Create Dashboard on Grafa for Postgre (Dashboard ID: 9628)

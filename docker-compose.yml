@@ -98,7 +98,7 @@ services:
     image: prom/prometheus
     container_name: prometheus
     volumes:
-      - ~/project/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ~/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     depends_on:
@@ -125,16 +125,6 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
-      
-  #node exporter
-#  node-exporter:
-#    image: prom/node-exporter:latest
-#    container_name: node-exporter
-#    ports:
-#      - "9100:9100"
-#    networks:
-#      - backend
-#    restart: unless-stopped
 
 volumes:
   postgres_data:
